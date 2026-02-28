@@ -61,7 +61,7 @@
         delete updated[data.id];
         peers = updated;
       } else if (data.type === 'position' && data.id) {
-        peers = { ...peers, [data.id]: { ...data, lastSeen: Date.now() } };
+        peers = { ...peers, [data.id]: { ...peers[data.id], ...data, lastSeen: Date.now() } };
       } else if (data.type === 'chat' && data.id) {
         const existing = peers[data.id] ?? { username: data.username, x: 0, y: 0, anim: 'idle', facing: 'right', isFlying: false, lastSeen: Date.now() };
         peers = { ...peers, [data.id]: { ...existing, chatMessage: data.message, lastSeen: Date.now() } };
