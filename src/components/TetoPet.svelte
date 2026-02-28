@@ -43,6 +43,16 @@
     }));
   }
 
+  function sendChat(msg) {
+    if (!msg.trim()) return;
+    ownChatMessage = msg.trim();
+    clearTimeout(ownChatTimer);
+    ownChatTimer = setTimeout(() => { ownChatMessage = ''; }, 5000);
+    socket?.send(JSON.stringify({ type: 'chat', id: socket.id, username: myUsername, message: msg.trim() }));
+    chatDraft = '';
+    showChatInput = false;
+  }
+
   function handlePartyMessage(event) {
     try {
       const data = JSON.parse(event.data);
@@ -52,6 +62,12 @@
         peers = updated;
       } else if (data.type === 'position' && data.id) {
         peers = { ...peers, [data.id]: { ...data, lastSeen: Date.now() } };
+      } else if (data.type === 'chat' && data.id) {
+        const existing = peers[data.id] ?? { username: data.username, x: 0, y: 0, anim: 'idle', facing: 'right', isFlying: false, lastSeen: Date.now() };
+        peers = { ...peers, [data.id]: { ...existing, chatMessage: data.message, lastSeen: Date.now() } };
+        setTimeout(() => {
+          if (peers[data.id]) peers = { ...peers, [data.id]: { ...peers[data.id], chatMessage: '' } };
+        }, 5000);
       }
     } catch (_) {}
   }
@@ -147,6 +163,13 @@
   let bubbleText  = '';
   let showBubble  = false;
   let bubbleTimer = null;
+
+  // ─── Chat ─────────────────────────────────────────────────────────────────
+  let showChatInput  = false;
+  let chatDraft      = '';
+  let chatInputEl;
+  let ownChatMessage = '';
+  let ownChatTimer   = null;
 
   // ─── Game loop ────────────────────────────────────────────────────────────────
   let loopId;
@@ -404,6 +427,7 @@
     clearTimeout(bubbleTimer);
     clearTimeout(landTimer);
     clearTimeout(spinTimer);
+    clearTimeout(ownChatTimer);
     if (socket) { socket.close(); socket = null; }
     document.removeEventListener('mousemove', onDocMousemove);
     document.removeEventListener('mouseup',   onDocMouseup);
@@ -452,6 +476,16 @@
   </div>
 {/if}
 
+<!-- Own chat bubble -->
+{#key ownChatMessage}
+  {#if ownChatMessage}
+    <div class="chat-bubble" style="left: {x}px; top: {y - SPRITE_H - 12}px;">
+      {ownChatMessage}
+      <div class="chat-bubble-tail"></div>
+    </div>
+  {/if}
+{/key}
+
 <!-- Ghost Tetos (other players) -->
 {#each Object.entries(peers) as [id, peer] (id)}
   <GhostTeto
@@ -461,8 +495,34 @@
     facing={peer.facing}
     isFlying={peer.isFlying}
     anim={peer.anim}
+    chatMessage={peer.chatMessage ?? ''}
   />
 {/each}
+
+<!-- Chat button -->
+<button
+  class="chat-btn"
+  on:click|stopPropagation={() => { showChatInput = !showChatInput; chatDraft = ''; }}
+>CHAT</button>
+
+<!-- Chat input overlay -->
+{#if showChatInput}
+  <div class="chat-overlay" on:click|stopPropagation>
+    <input
+      bind:this={chatInputEl}
+      bind:value={chatDraft}
+      class="chat-input"
+      maxlength="80"
+      placeholder="say something..."
+      autofocus
+      on:keydown={(e) => {
+        if (e.key === 'Enter') sendChat(chatDraft);
+        if (e.key === 'Escape') { showChatInput = false; chatDraft = ''; }
+      }}
+    />
+    <button class="chat-send-btn" on:click={() => sendChat(chatDraft)}>OK</button>
+  </div>
+{/if}
 
 <!-- Context menu -->
 {#if showMenu}
@@ -588,6 +648,94 @@
     border-top:   8px solid #fff8fc;
   }
 
+  /* ── Chat bubble (global so GhostTeto can use it too) ── */
+  :global(.chat-bubble) {
+    position: fixed;
+    z-index: 201;
+    transform: translateX(-50%) translateY(-100%);
+    background: #0d0d26;
+    border: 3px solid #4fffda;
+    box-shadow: 3px 3px 0 #000;
+    padding: 8px 14px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #4fffda;
+    white-space: normal;
+    max-width: 200px;
+    word-break: break-word;
+    text-align: center;
+    pointer-events: none;
+    animation: chat-bubble-anim 5s ease forwards;
+  }
+
+  :global(.chat-bubble-tail) {
+    position: absolute;
+    bottom: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left:  7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top:   10px solid #4fffda;
+  }
+
+  /* ── Chat UI ── */
+  .chat-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 150;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    background: #0d0d26;
+    color: #4fffda;
+    border: 3px solid #4fffda;
+    box-shadow: 3px 3px 0 #000;
+    padding: 8px 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+
+  .chat-btn:hover { background: #4fffda; color: #0d0d26; }
+  .chat-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+
+  .chat-overlay {
+    position: fixed;
+    bottom: 60px;
+    right: 20px;
+    z-index: 300;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .chat-input {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    background: #0d0d26;
+    color: #fff8fc;
+    border: 3px solid #ff6b9d;
+    box-shadow: 3px 3px 0 #000;
+    padding: 8px 10px;
+    width: 220px;
+    outline: none;
+  }
+
+  .chat-input::placeholder { color: #885566; }
+
+  .chat-send-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    background: #ff6b9d;
+    color: #0d0d26;
+    border: 3px solid #cc3377;
+    box-shadow: 3px 3px 0 #000;
+    padding: 8px 10px;
+    cursor: pointer;
+  }
+
+  .chat-send-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+
   /* ── Keyframes ── */
 
   @keyframes bob {
@@ -607,6 +755,14 @@
     33%  { transform: translateY(-8px) rotate(0deg);  }
     66%  { transform: translateY(-4px) rotate(4deg);  }
     100% { transform: translateY(0)   rotate(-4deg); }
+  }
+
+  @keyframes chat-bubble-anim {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-115%) scale(0.7); }
+    8%   { opacity: 1; transform: translateX(-50%) translateY(-100%) scale(1.05); }
+    15%  { transform: translateX(-50%) translateY(-100%) scale(1); }
+    80%  { opacity: 1; transform: translateX(-50%) translateY(-100%) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-100%); }
   }
 
   @keyframes bubble-pop {

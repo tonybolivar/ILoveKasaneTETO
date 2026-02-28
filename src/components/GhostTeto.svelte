@@ -5,11 +5,21 @@
   export let facing = 'right';
   export let isFlying = false;
   export let anim = 'idle';
+  export let chatMessage = '';
 
   $: spriteSrc = (isFlying || anim !== 'walk')
     ? '/tetofront.png'
     : facing === 'right' ? '/tetoright.png' : '/tetoleft.png';
 </script>
+
+{#key chatMessage}
+  {#if chatMessage}
+    <div class="chat-bubble" style="left: {x}px; top: {y - 210}px;">
+      {chatMessage}
+      <div class="chat-bubble-tail"></div>
+    </div>
+  {/if}
+{/key}
 
 <div
   class="ghost"
