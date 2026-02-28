@@ -4,13 +4,15 @@
 
   import { onMount } from 'svelte';
 
+  export let ready = false; // set to true by parent after splash to trigger autoplay
+
   // ─── Your tracks ───────────────────────────────────────────────────────────
   const tracks = [
+    { title: 'MACHINE LOVE',             src: '/music/Machine Love.mp3' },
     { title: 'BIRDBRAIN',                src: '/music/BIRDBRAIN.mp3' },
     { title: 'CADMIUM COLORS',           src: '/music/Cadmium Colors.mp3' },
     { title: 'FIRE!!!',                  src: '/music/FIRE!!!.mp3' },
     { title: 'I WISH THAT I COULD FALL', src: '/music/I Wish That I Could Fall.mp3' },
-    { title: 'MACHINE LOVE',             src: '/music/Machine Love.mp3' },
     { title: 'ROT FOR CLOUT',            src: '/music/ROT FOR CLOUT.mp3' },
     { title: 'STRAWBERRY',               src: '/music/Strawberry.mp3' },
   ];
@@ -71,6 +73,13 @@
     if (!audioEl || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     audioEl.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
+  }
+
+  // Autoplay first track once the splash is dismissed
+  $: if (ready && audioEl && currentTrack && !playing) {
+    audioEl.src = currentTrack.src;
+    audioEl.load();
+    audioEl.play().then(() => playing = true).catch(() => {});
   }
 
   onMount(() => {

@@ -35,7 +35,7 @@
 <TetoPet />
 
 <!-- Spotify music player — bottom left corner -->
-<MusicPlayer />
+<MusicPlayer ready={splashDone} />
 
 <!-- Retro visitor counter — bottom right corner -->
 <VisitorCounter />

@@ -8,7 +8,8 @@
 
   onMount(async () => {
     try {
-      const res = await fetch('https://api.counterapi.dev/v1/tetotamagotchi/visits/up');
+      const target = encodeURIComponent('https://api.counterapi.dev/v1/tetotamagotchi/visits/up');
+      const res = await fetch(`https://corsproxy.io/?url=${target}`);
       const data = await res.json();
       count = data.count;
     } catch {
