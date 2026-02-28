@@ -82,6 +82,7 @@ export function startDecayTimers() {
     energy.update(e => clamp(e - 1));
     saveGame();
   }, DECAY.energy));
+  
 
   // Energy slowly refills on its own so she never bottoms out permanently
   ids.push(setInterval(() => {

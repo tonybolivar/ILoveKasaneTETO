@@ -21,6 +21,7 @@
   let collapsed = false;
   let volume    = parseInt(localStorage.getItem('teto_volume') ?? '75');
   let playing   = false;
+  let autoplayed = false;
   let trackIndex = 0;
   let currentTime = 0;
   let duration    = 0;
@@ -75,8 +76,9 @@
     audioEl.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
   }
 
-  // Autoplay first track once the splash is dismissed
-  $: if (ready && audioEl && currentTrack && !playing) {
+  // Autoplay first track once the splash is dismissed (only fires once)
+  $: if (ready && !autoplayed && audioEl && currentTrack) {
+    autoplayed = true;
     audioEl.src = currentTrack.src;
     audioEl.load();
     audioEl.play().then(() => playing = true).catch(() => {});
@@ -122,7 +124,7 @@
       <div class="controls">
         <button class="ctrl-btn" on:click={prev} disabled={tracks.length < 2}>◄◄</button>
         <button class="ctrl-btn play-btn" on:click={toggle}>
-          {playing ? '■' : '▶'}
+          {playing ? '❚❚' : '▶'}
         </button>
         <button class="ctrl-btn" on:click={next} disabled={tracks.length < 2}>▶▶</button>
       </div>

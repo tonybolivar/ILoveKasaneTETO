@@ -76,6 +76,10 @@
   let eatTimer  = null;
   let showBread = false;
 
+  // ─── Spin (double-click) ──────────────────────────────────────────────────────
+  let isSpinning = false;
+  let spinTimer  = null;
+
   // ─── UI ───────────────────────────────────────────────────────────────────────
   let showMenu  = false;
   let menuX     = 0;
@@ -268,6 +272,7 @@
 
   // ─── Click / right-click ──────────────────────────────────────────────────────
   function onSpriteClick(e) {
+    if (isSpinning) return;
     e.stopPropagation();
     showMenu = false;
     const prev = bubbleText;
@@ -276,6 +281,14 @@
     showBubble = true;
     clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(() => { showBubble = false; }, 1800);
+  }
+
+  function onSpriteDblClick(e) {
+    e.stopPropagation();
+    showBubble = false;
+    isSpinning = true;
+    clearTimeout(spinTimer);
+    spinTimer = setTimeout(() => { isSpinning = false; }, 600);
   }
 
   function onContextMenu(e) {
@@ -323,6 +336,7 @@
     clearTimeout(eatTimer);
     clearTimeout(bubbleTimer);
     clearTimeout(landTimer);
+    clearTimeout(spinTimer);
     document.removeEventListener('mousemove', onDocMousemove);
     document.removeEventListener('mouseup',   onDocMouseup);
     document.removeEventListener('click',     onDocClick);
@@ -338,9 +352,11 @@
   class:held={isDragging}
   class:asleep={false}
   class:flying={isFlying}
+  class:spin={isSpinning}
   style="left: {x}px; top: {y}px;"
   on:mousedown={onSpriteMousedown}
   on:click={onSpriteClick}
+  on:dblclick={onSpriteDblClick}
   on:contextmenu={onContextMenu}
   on:touchstart={onSpriteTouchstart}
 >
@@ -526,6 +542,18 @@
     40%  { bottom: 40px;  opacity: 1; }
     70%  { bottom: 75px;  opacity: 0.6; }
     100% { bottom: 110px; opacity: 0; }
+  }
+
+  .spin .sprite {
+    animation: spin 0.6s steps(8) forwards !important;
+  }
+
+  @keyframes spin {
+    0%   { transform: rotate(0deg)   scaleX(1);  }
+    25%  { transform: rotate(90deg)  scaleX(0.2); }
+    50%  { transform: rotate(180deg) scaleX(1);  }
+    75%  { transform: rotate(270deg) scaleX(0.2); }
+    100% { transform: rotate(360deg) scaleX(1);  }
   }
 
   @keyframes zzz-drift {
