@@ -682,8 +682,8 @@
   /* ── Chat UI ── */
   .chat-btn {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 84px;
+    right: 16px;
     z-index: 150;
     font-family: 'Press Start 2P', monospace;
     font-size: 9px;
@@ -701,8 +701,8 @@
 
   .chat-overlay {
     position: fixed;
-    bottom: 60px;
-    right: 20px;
+    bottom: 130px;
+    right: 16px;
     z-index: 300;
     display: flex;
     gap: 6px;
