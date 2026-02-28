@@ -10,6 +10,7 @@
   import MusicPlayer from './components/MusicPlayer.svelte';
   import SplashScreen from './components/SplashScreen.svelte';
   import VisitorCounter from './components/VisitorCounter.svelte';
+  import SuggestionBox from './components/SuggestionBox.svelte';
 
   let splashDone = false;
 
@@ -39,3 +40,6 @@
 
 <!-- Retro visitor counter — bottom right corner -->
 <VisitorCounter />
+
+<!-- Suggestion box — top right corner -->
+<SuggestionBox />
