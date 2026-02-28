@@ -18,16 +18,21 @@
   const SPRITE_H    = 180;   // bigger!
   const FLOOR_OFFSET = 30;   // px from bottom of screen
 
-  // ─── No-go zones (UI panels on the floor) ────────────────────────────────────
-  // MusicPlayer: fixed bottom-left, 280px wide + 16px margin + sprite half-width buffer
-  const LEFT_ZONE  = 320;
-  // VisitorCounter: fixed bottom-right, ~130px wide + 16px margin + buffer
-  const RIGHT_ZONE = 160;
-
   // ─── Position ─────────────────────────────────────────────────────────────────
-  let x      = 400;
-  let y      = 0;
-  let floorY = 0;
+  let x = 400;
+  let y = 0;
+
+  // Dynamic floor — reads UI panel positions from the DOM so Teto can stand on them
+  function effectiveFloor() {
+    const base = window.innerHeight - FLOOR_OFFSET;
+    for (const sel of ['.player', '.counter']) {
+      const el = document.querySelector(sel);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (x >= r.left - 10 && x <= r.right + 10) return r.top;
+    }
+    return base;
+  }
 
   // ─── Physics (gravity when not flying) ───────────────────────────────────────
   let vy         = 0;
@@ -82,11 +87,18 @@
   // ─── Game loop ────────────────────────────────────────────────────────────────
   let loopId;
 
+  // Keep Teto inside the screen horizontally
+  function clampX() {
+    x = Math.max(50, Math.min(window.innerWidth - 50, x));
+  }
+
   function tick() {
-    if (isDragging) { anim = 'held'; return; }
+    if (isDragging) { clampX(); anim = 'held'; return; }
+
+    const curFloor = effectiveFloor();
 
     // ── Flying mode: move freely in 2D ──
-    if (isFlying && !false) {
+    if (isFlying) {
       anim = 'fly';
       if (flyTargetX !== null && flyTargetY !== null) {
         const dx   = flyTargetX - x;
@@ -96,28 +108,25 @@
         if (dist < flySpeed) {
           x = flyTargetX;
           y = flyTargetY;
-          flyTargetX = flyTargetY = null; // hover in place
+          flyTargetX = flyTargetY = null;
         } else {
-          const nx = dx / dist;
-          const ny = dy / dist;
-          x += nx * flySpeed;
-          y += ny * flySpeed;
+          x += (dx / dist) * flySpeed;
+          y += (dy / dist) * flySpeed;
           facing = dx > 0 ? 'right' : 'left';
         }
-        // Clamp to screen
         x = Math.max(50, Math.min(window.innerWidth  - 50, x));
-        y = Math.max(60, Math.min(window.innerHeight - 60, y));
+        y = Math.max(10, Math.min(window.innerHeight - 60, y));
       }
       return;
     }
 
     // ── Gravity / falling ──
-    if (y < floorY || isFalling) {
+    if (y < curFloor || isFalling) {
       vy += GRAVITY;
-      y   = Math.min(y + vy, floorY);
+      y   = Math.min(y + vy, curFloor);
 
-      if (y >= floorY) {
-        y = floorY;
+      if (y >= curFloor) {
+        y = curFloor;
         if (Math.abs(vy) > SETTLE_V) {
           vy = -vy * BOUNCE;
         } else {
@@ -125,13 +134,20 @@
           isFalling = false;
         }
       }
+      clampX();
       anim = 'idle';
       return;
     }
 
-    // ── On the floor ──
-    if (false)   { anim = 'sleep'; return; }
-    if (isEating)      { anim = 'eat';   return; }
+    // ── Step up onto a platform (floor rose under Teto) ──
+    if (y > curFloor) {
+      y  = curFloor;
+      vy = 0;
+    }
+
+    // ── On the floor / platform ──
+    if (false)    { anim = 'sleep'; return; }
+    if (isEating) { anim = 'eat';   return; }
 
     if (walkTarget !== null) {
       const dx = walkTarget - x;
@@ -144,7 +160,7 @@
         x += step;
         facing = step > 0 ? 'right' : 'left';
         anim = 'walk';
-        x = Math.max(LEFT_ZONE, Math.min(window.innerWidth - RIGHT_ZONE, x));
+        clampX();
       }
     } else {
       anim = 'idle';
@@ -166,9 +182,8 @@
         if (!isFlying && Math.random() < 0.35) {
           takeOff();
         } else if (!isFlying) {
-          // Ground walk — stay out of UI panel zones
-          const safeWidth = window.innerWidth - RIGHT_ZONE - LEFT_ZONE;
-          walkTarget = LEFT_ZONE + Math.random() * safeWidth;
+          // Ground walk — full screen width, she can step onto panels
+          walkTarget = 70 + Math.random() * (window.innerWidth - 140);
           walkSpeed  = 2.5 + Math.random() * 3;
         } else {
           // Already flying — pick a new flight destination
@@ -193,7 +208,7 @@
   function setFlyTarget() {
     const margin = 80;
     flyTargetX = margin + Math.random() * (window.innerWidth  - margin * 2);
-    flyTargetY = 80     + Math.random() * (window.innerHeight * 0.65);
+    flyTargetY = 10     + Math.random() * (window.innerHeight * 0.90);
     flySpeed   = 3 + Math.random() * 3;
   }
 
@@ -285,9 +300,8 @@
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
   onMount(() => {
-    floorY = window.innerHeight - FLOOR_OFFSET;
-    x = Math.max(LEFT_ZONE, Math.min(window.innerWidth - RIGHT_ZONE, window.innerWidth / 2));
-    y = floorY;
+    x = window.innerWidth / 2;
+    y = window.innerHeight - FLOOR_OFFSET;
 
     loopId = setInterval(tick, 62);
     scheduleMove();
@@ -299,8 +313,7 @@
     document.addEventListener('touchend',  onDocTouchend);
 
     window.addEventListener('resize', () => {
-      floorY = window.innerHeight - FLOOR_OFFSET;
-      if (!isDragging && !isFalling && !isFlying) y = floorY;
+      if (!isDragging && !isFalling && !isFlying) y = effectiveFloor();
     });
   });
 
