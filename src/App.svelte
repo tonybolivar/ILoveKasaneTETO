@@ -9,6 +9,7 @@
   import TetoPet from './components/TetoPet.svelte';
   import MusicPlayer from './components/MusicPlayer.svelte';
   import SplashScreen from './components/SplashScreen.svelte';
+  import VisitorCounter from './components/VisitorCounter.svelte';
 
   let splashDone = false;
 
@@ -35,3 +36,6 @@
 
 <!-- Spotify music player — bottom left corner -->
 <MusicPlayer />
+
+<!-- Retro visitor counter — bottom right corner -->
+<VisitorCounter />

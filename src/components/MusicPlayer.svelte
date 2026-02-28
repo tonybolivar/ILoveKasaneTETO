@@ -3,6 +3,9 @@
   // Sits in the bottom-left corner, collapsible
 
   let collapsed = false;
+  let volume = parseInt(localStorage.getItem('teto_volume') ?? '75');
+
+  $: localStorage.setItem('teto_volume', String(volume));
 </script>
 
 <div class="player" class:collapsed>
@@ -26,6 +29,20 @@
         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
         loading="lazy"
       ></iframe>
+    </div>
+
+    <!-- Volume slider -->
+    <div class="volume-row">
+      <span class="vol-icon">{volume === 0 ? '✕' : '♪'}</span>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        bind:value={volume}
+        class="vol-slider"
+        aria-label="Volume"
+      />
+      <span class="vol-val">{volume}</span>
     </div>
   {/if}
 
@@ -83,6 +100,69 @@
   .toggle {
     font-size: 6px;
     color: #7777aa;
+  }
+
+  /* Volume row */
+  .volume-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    background: #0d0d1a;
+    border-top: 2px solid #1a1a3a;
+  }
+
+  .vol-icon {
+    font-size: 9px;
+    color: #ff6b9d;
+    width: 10px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .vol-val {
+    font-size: 6px;
+    color: #7777aa;
+    width: 18px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .vol-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: #1a1a3a;
+    border: 2px solid #ff6b9d;
+    outline: none;
+    cursor: pointer;
+    image-rendering: pixelated;
+  }
+
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 14px;
+    background: #ff6b9d;
+    cursor: pointer;
+    border: none;
+    border-radius: 0;
+    image-rendering: pixelated;
+  }
+
+  .vol-slider::-moz-range-thumb {
+    width: 10px;
+    height: 14px;
+    background: #ff6b9d;
+    cursor: pointer;
+    border: none;
+    border-radius: 0;
+  }
+
+  .vol-slider::-webkit-slider-runnable-track {
+    background: transparent;
   }
 
   /* Remove iframe default border/bg */
