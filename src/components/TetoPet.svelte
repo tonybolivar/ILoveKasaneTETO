@@ -5,6 +5,66 @@
   import { onMount, onDestroy } from 'svelte';
   import { feedTeto, playWithTeto } from '../stores/gameStore.js';
   import ContextMenu from './ContextMenu.svelte';
+  import GhostTeto from './GhostTeto.svelte';
+  import PartySocket from 'partysocket';
+
+  // ─── Multiplayer ─────────────────────────────────────────────────────────────
+  const SONG_NAMES = [
+    'KASANE_TERRITORY', 'BLESS_YOUR_BREATH', 'FREELY_TOMORROW',
+    'HIBANA', 'FAKE_SMILE', 'TWO_FACED_LOVERS', 'ASHES_TO_ASHES',
+    'TENGAKU', 'SUKI_KIRAI', 'DREAMIN_CHUCHU', 'PALETTE',
+    'KURONEKO_DARLING', 'ROLLING_GIRL', 'PANDA_HERO', 'MAGNET',
+    'HAPPY_SYNTHESIZER', 'CHOCOTTO_LOVE', 'MATRYOSHKA', 'KAGEROU_DAZE',
+    'MARIONETTE', 'MOSHI_MOSHI_HASHIRE', 'ECHO', 'DISAPPEARANCE',
+    'ELECTRIC_LOVE', 'ALIEN_ALIEN', 'WORLD_IS_MINE', 'BLESSING',
+  ];
+
+  const PARTY_HOST = import.meta.env.VITE_PARTYKIT_HOST ?? 'localhost:1999';
+
+  let myUsername = localStorage.getItem('teto_mp_username');
+  if (!myUsername) {
+    const song = SONG_NAMES[Math.floor(Math.random() * SONG_NAMES.length)];
+    const num  = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    myUsername = `${song}#${num}`;
+    localStorage.setItem('teto_mp_username', myUsername);
+  }
+
+  let socket = null;
+  let peers  = {};   // { [socketId]: { username, x, y, anim, facing, isFlying, lastSeen } }
+  let broadcastIntervalId = null;
+
+  function broadcast() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({
+      type: 'position',
+      id: socket.id,
+      username: myUsername,
+      x, y, anim, facing, isFlying,
+    }));
+  }
+
+  function handlePartyMessage(event) {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'leave') {
+        const updated = { ...peers };
+        delete updated[data.id];
+        peers = updated;
+      } else if (data.type === 'position' && data.id) {
+        peers = { ...peers, [data.id]: { ...data, lastSeen: Date.now() } };
+      }
+    } catch (_) {}
+  }
+
+  function pruneStalePeers() {
+    const now  = Date.now();
+    const next = { ...peers };
+    let changed = false;
+    for (const id of Object.keys(next)) {
+      if (now - next[id].lastSeen > 6000) { delete next[id]; changed = true; }
+    }
+    if (changed) peers = next;
+  }
 
   // ─── Cute things Teto says when clicked ──────────────────────────────────────
   const QUIPS = [
@@ -317,7 +377,13 @@
     y = window.innerHeight - FLOOR_OFFSET;
 
     loopId = setInterval(tick, 62);
+    setInterval(pruneStalePeers, 2000);
     scheduleMove();
+
+    // ── PartyKit multiplayer ──
+    socket = new PartySocket({ host: PARTY_HOST, room: 'teto-world' });
+    socket.addEventListener('message', handlePartyMessage);
+    broadcastIntervalId = setInterval(broadcast, 80);
 
     document.addEventListener('mousemove', onDocMousemove);
     document.addEventListener('mouseup',   onDocMouseup);
@@ -332,11 +398,13 @@
 
   onDestroy(() => {
     clearInterval(loopId);
+    clearInterval(broadcastIntervalId);
     clearTimeout(aiTimer);
     clearTimeout(eatTimer);
     clearTimeout(bubbleTimer);
     clearTimeout(landTimer);
     clearTimeout(spinTimer);
+    if (socket) { socket.close(); socket = null; }
     document.removeEventListener('mousemove', onDocMousemove);
     document.removeEventListener('mouseup',   onDocMouseup);
     document.removeEventListener('click',     onDocClick);
@@ -383,6 +451,18 @@
     <div class="bubble-tail"></div>
   </div>
 {/if}
+
+<!-- Ghost Tetos (other players) -->
+{#each Object.entries(peers) as [id, peer] (id)}
+  <GhostTeto
+    x={peer.x}
+    y={peer.y}
+    username={peer.username}
+    facing={peer.facing}
+    isFlying={peer.isFlying}
+    anim={peer.anim}
+  />
+{/each}
 
 <!-- Context menu -->
 {#if showMenu}
