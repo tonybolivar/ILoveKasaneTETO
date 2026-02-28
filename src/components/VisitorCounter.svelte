@@ -1,18 +1,25 @@
 <script>
-  // VisitorCounter.svelte — Retro web-style visit counter
-  // Increments once per session, persists across visits via localStorage
+  // VisitorCounter.svelte — Real global visitor counter via CounterAPI
+  // Every visitor increments the shared count at counterapi.dev
 
   import { onMount } from 'svelte';
 
-  let count = 0;
+  let count = null; // null = loading
 
-  onMount(() => {
-    const stored = parseInt(localStorage.getItem('teto_visit_count') || '0');
-    count = stored + 1;
-    localStorage.setItem('teto_visit_count', String(count));
+  onMount(async () => {
+    try {
+      const res = await fetch('https://api.counterapi.dev/v1/tetotamagotchi/visits/up');
+      const data = await res.json();
+      count = data.count;
+    } catch {
+      // Fallback to localStorage if the API is unreachable
+      const stored = parseInt(localStorage.getItem('teto_visit_count') || '0');
+      count = stored + 1;
+      localStorage.setItem('teto_visit_count', String(count));
+    }
   });
 
-  $: digits = String(count).padStart(6, '0');
+  $: digits = count === null ? '......' : String(count).padStart(6, '0');
 </script>
 
 <div class="counter">
