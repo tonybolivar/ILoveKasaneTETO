@@ -18,6 +18,12 @@
   const SPRITE_H    = 180;   // bigger!
   const FLOOR_OFFSET = 30;   // px from bottom of screen
 
+  // ─── No-go zones (UI panels on the floor) ────────────────────────────────────
+  // MusicPlayer: fixed bottom-left, 280px wide + 16px margin + sprite half-width buffer
+  const LEFT_ZONE  = 320;
+  // VisitorCounter: fixed bottom-right, ~130px wide + 16px margin + buffer
+  const RIGHT_ZONE = 160;
+
   // ─── Position ─────────────────────────────────────────────────────────────────
   let x      = 400;
   let y      = 0;
@@ -138,7 +144,7 @@
         x += step;
         facing = step > 0 ? 'right' : 'left';
         anim = 'walk';
-        x = Math.max(50, Math.min(window.innerWidth - 50, x));
+        x = Math.max(LEFT_ZONE, Math.min(window.innerWidth - RIGHT_ZONE, x));
       }
     } else {
       anim = 'idle';
@@ -160,8 +166,9 @@
         if (!isFlying && Math.random() < 0.35) {
           takeOff();
         } else if (!isFlying) {
-          // Ground walk — faster and more frequent
-          walkTarget = margin + Math.random() * (window.innerWidth - margin * 2);
+          // Ground walk — stay out of UI panel zones
+          const safeWidth = window.innerWidth - RIGHT_ZONE - LEFT_ZONE;
+          walkTarget = LEFT_ZONE + Math.random() * safeWidth;
           walkSpeed  = 2.5 + Math.random() * 3;
         } else {
           // Already flying — pick a new flight destination
@@ -279,7 +286,7 @@
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
   onMount(() => {
     floorY = window.innerHeight - FLOOR_OFFSET;
-    x = window.innerWidth / 2;
+    x = Math.max(LEFT_ZONE, Math.min(window.innerWidth - RIGHT_ZONE, window.innerWidth / 2));
     y = floorY;
 
     loopId = setInterval(tick, 62);
